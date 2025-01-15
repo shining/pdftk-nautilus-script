@@ -17,6 +17,13 @@ elif [[ -n "${CAJA_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
     FPATHS="${CAJA_SCRIPT_SELECTED_FILE_PATHS}"
 fi
 
+count=$(echo -n "${FPATHS}" | wc -l)
+
+if (( "${count}" > 1 )); then
+    zenity --info --text="You cannot select more than one file."
+    exit
+fi
+
 for file in ${FPATHS}
 do
   if [[ -f "${file}" ]]; then

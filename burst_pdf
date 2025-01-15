@@ -6,7 +6,6 @@ set -o nounset
 # in NAUTILUS_SCRIPT_SELECTED_FILE_PATHS files are separated by newlines and
 # not spaces so set IFS to newline.
 IFS=$'\n'
-PDFARGUMENTS=()
 PDFDIR=""
 
 # support NAUTILUS + NEMO + CAJA
@@ -18,23 +17,25 @@ elif [[ -n "${CAJA_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
     FPATHS="${CAJA_SCRIPT_SELECTED_FILE_PATHS}"
 fi
 
-filename=""
+count=$(echo -n "${FPATHS}" | wc -l)
+
+if (( "${count}" > 1 )); then
+    zenity --info --text="You cannot select more than one file."
+    exit
+fi
+
 for file in ${FPATHS}
 do
   if [[ -f "${file}" ]]; then
       ext=${file##*.}
       if [[ "${ext}" == "pdf" ]]; then
-          PDFARGUMENTS+=("${file}")
           filename=$(basename "${file}" .pdf)
           filename=${filename// /}
           PDFDIR=$(dirname "${file}")/"${filename}"
+          mkdir "${PDFDIR}"
+          cd "${PDFDIR}" || exit
+          pdftk "${file}" burst output "${filename}"_%02d.pdf
+          zenity --info --text="PDF burst to ${PDFDIR}"
       fi
   fi
 done
-
-if (( ${#PDFARGUMENTS[@]} )); then
-    mkdir "${PDFDIR}"
-    cd "${PDFDIR}" || exit
-    pdftk "${PDFARGUMENTS[@]}" burst output "${filename}"_%02d.pdf
-    zenity --info --text="PDF burst to ${PDFDIR}"
-fi
