@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+# in NAUTILUS_SCRIPT_SELECTED_FILE_PATHS files are separated by newlines and
+# not spaces so set IFS to newline.
+IFS=$'\n'
+PDFDIR=""
+
+# support NAUTILUS + NEMO + CAJA
+if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
+elif [[ -n "${NEMO_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${NEMO_SCRIPT_SELECTED_FILE_PATHS}"
+elif [[ -n "${CAJA_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${CAJA_SCRIPT_SELECTED_FILE_PATHS}"
+fi
+
+for file in ${FPATHS}
+do
+  if [[ -f "${file}" ]]; then
+      ext=${file##*.}
+      if [[ "${ext}" == "pdf" ]]; then
+          PDFDIR=$(dirname "${file}")
+          cd "${PDFDIR}" || continue
+          pdftoppm -png "${file}" "${file}"
+          zenity --info --text="PDF ${file} converted to PNG"
+      fi
+  fi
+done
