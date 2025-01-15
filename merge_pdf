@@ -1,25 +1,38 @@
 #!/bin/bash
-ifs=$IFS
-IFS='\
-'
-PDFARGUMENTS=""
-fpaths=`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | sort`
-for file in $fpaths
+
+set -o errexit
+set -o nounset
+
+# in NAUTILUS_SCRIPT_SELECTED_FILE_PATHS files are separated by newlines and
+# not spaces so set IFS to newline.
+IFS=$'\n'
+PDFARGUMENTS=()
+PDFDIR=""
+
+# support NAUTILUS + NEMO + CAJA
+if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
+elif [[ -n "${NEMO_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${NEMO_SCRIPT_SELECTED_FILE_PATHS}"
+elif [[ -n "${CAJA_SCRIPT_SELECTED_FILE_PATHS-}" ]]; then
+    FPATHS="${CAJA_SCRIPT_SELECTED_FILE_PATHS}"
+fi
+
+FPATHS=$(echo "${FPATHS}" | sort)
+
+for file in ${FPATHS}
 do
-  if [ -f "$file" ]; then
-  base=${file%.*}
-	ext=${file##*.}
-	if [ "$ext" == "pdf" ]; then
-	    PDFARGUMENTS="$PDFARGUMENTS \"$file\""
-	    #pdfdir=`dirname "$file"`
-	fi
+  if [[ -f "${file}" ]]; then
+      ext=${file##*.}
+      if [[ "${ext}" == "pdf" ]]; then
+          PDFARGUMENTS+=("${file}")
+          PDFDIR=$(dirname "${file}")
+      fi
   fi
 done
 
-#szSavePath=$(zenity --file-selection --save --confirm-overwrite);echo "$szSavePath"
-
-if [ -n "$PDFARGUMENTS" ]; then
-#    eval pdftk "$PDFARGUMENTS" cat output "$szSavePath"
-    eval pdftk "$PDFARGUMENTS" cat output "merge_result.pdf"
+if (( ${#PDFARGUMENTS[@]} )); then
+    output="${PDFDIR}"/merge_result.pdf
+    pdftk "${PDFARGUMENTS[@]}" cat output "${output}"
+    zenity --info --text="PDF merged to ${output}"
 fi
-IFS=$ifs
